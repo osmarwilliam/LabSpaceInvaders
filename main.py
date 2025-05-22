@@ -21,7 +21,7 @@
 from PPlay.sprite import *
 import states.jogo as jogo
 import config
-
+import pygame
 
 play_button = Sprite("Assets/button2.png", 1)
 diff_button = Sprite("Assets/button2.png", 1)
@@ -33,11 +33,10 @@ ranking_button.set_position(350, 300,)
 exit_button.set_position(350, 400,)
 
 diff = 1
-
+clock = pygame.time.Clock()
 
 def menu():
 
-    
     config.janela.set_background_color((200,200,200))
     config.janela.draw_text("play", 400, 100, size = 50, color=(0,0,0), font_name= "Arial", bold= True, italic = False)
     config.janela.draw_text("difficulty", 400, 200, size = 50, color=(0,0,0), font_name= "Arial", bold= True, italic = False)
@@ -76,7 +75,8 @@ def diff():
 
 while True:
     menu()
-    print("a")
+    
+
     if config.estado == 1:
         config.janela.set_background_color((200,200,200))
         jogo.start()
