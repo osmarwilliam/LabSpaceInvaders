@@ -21,7 +21,6 @@
 from PPlay.sprite import *
 import states.jogo as jogo
 import config
-import pygame
 
 play_button = Sprite("Assets/button2.png", 1)
 diff_button = Sprite("Assets/button2.png", 1)
@@ -33,7 +32,6 @@ ranking_button.set_position(350, 300,)
 exit_button.set_position(350, 400,)
 
 diff = 1
-clock = pygame.time.Clock()
 
 def menu():
 
