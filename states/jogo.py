@@ -1,6 +1,7 @@
 from PPlay.sprite import *
 import config
 import pygame
+import random
 
 # quanto a nave irá descer após bater nas paredes laterais
 descida_inimigos = 30
@@ -82,45 +83,126 @@ def jogo_acabou():
             config.estado = 0
             break
 
-def kill(listaProjeteis,matrizDeInimigos):
-    for k,linhaDeInimigos in enumerate(matrizDeInimigos):
-        for i,inimigo in enumerate(linhaDeInimigos):
-            for j,projetil in enumerate(listaProjeteis):
-                    if (projetil.collided(inimigo)):
-                        listaProjeteis.pop(j)
-                        linhaDeInimigos.pop(i)
+# calculo para verificar se o tiro ta dentro da matriz e eliminar os inimigos 
+def kill_otimizado(lista_projeteis, matriz_inimigos):
+    
+    # verifica se a matriz de ininmigos ta vazia e retorna a primeira linha que possui inimigos
+    primeira_linha_nao_vazia = next((linha for linha in matriz_inimigos if linha), None)
+    if not primeira_linha_nao_vazia:
+        #print("matriz vazia")
+        return 
+    
+    # 
+    primeiro_inimigo = primeira_linha_nao_vazia[0]
+    min_x = primeiro_inimigo.x
+    max_x = primeiro_inimigo.x + primeiro_inimigo.width
+    min_y = primeiro_inimigo.y
+    max_y = primeiro_inimigo.y + primeiro_inimigo.height 
+    
+    for linha in matriz_inimigos:
+        for inimigo in linha:
+            if inimigo.x < min_x:
+                min_x = inimigo.x
+            if inimigo.x + inimigo.width > max_x:
+                max_x = inimigo.x + inimigo.width
+            if inimigo.y < min_y:
+                min_y = inimigo.y
+            if inimigo.y + inimigo.height > max_y:
+                max_y = inimigo.y + inimigo.height
+    
+    for projetil in lista_projeteis[:]: 
+        if (projetil.x >= min_x and projetil.x <= max_x and
+            projetil.y >= min_y and projetil.y <= max_y):
+            
+            for linha_inimigos in matriz_inimigos:
+                for inimigo in linha_inimigos[:]:
+                    if projetil.collided(inimigo):
+                        lista_projeteis.remove(projetil)
+                        linha_inimigos.remove(inimigo)
+                        break 
+                else:
+                    continue
+                break
+
+def cria_projetil_inimigo(projetil_inimigos, matriz_inimigos):
+    shooting = Sprite("Assets/projetil2.png", 1)
+    primeira_linha_nao_vazia = next((linha for linha in matriz_inimigos if linha), None)
+    
+    if not primeira_linha_nao_vazia:
+        return
+
+    pos = random.randint(0, len(primeira_linha_nao_vazia) - 1)
+    
+    shooting.set_position(primeira_linha_nao_vazia[pos].x, primeira_linha_nao_vazia[pos].y)
+    projetil_inimigos.append(shooting)
+
+def draw_tiros_inimigos(projetil_inimigos, vidas_nave, imortal):
+    if len(projetil_inimigos) == 0:
+        return
+
+    for i in projetil_inimigos:
+        i.y += config.janela.delta_time() * 400
+        i.draw()
+        if (i.y > config.janela.height + i.height):
+            projetil_inimigos.remove(i)
+
+        if i.collided(naveMae) and not imortal:
+            projetil_inimigos.remove(i)
+            return True
+            
+
 
 # inicia o jogo
 def start():
 
     clock = pygame.time.Clock()
     cronometro = 0
+    tempo = 0
+
+    
+    # a quantidade de vidas da nave
+    vidas_nave = 3
+
+    # respawn cooldown
+    respawn_cooldown = 2
 
     # configuações iniciais do jogo
+    projetil_inimigos= []
     projetil = []
     vel_NaveMae = 1000
-    tempo_recarga = 0.150
+    tempo_recarga_tiro_inimigos = 1
+    tempo_recarga_tiro_player = 0.150
     vel_Projetil = 200
-    vel_Inimigos = 600
+    vel_Inimigos = 400
     matrizDeInimigos = []
     direcao_inimigos = 1
     MAX_DELTA_TIME = 1/15.0
-    
+    linha = 4
+    coluna = 4
+    tempo_respawn = 0
+
+    # algumas variaveis que lidam caso o player tenha sido atingido
+    imortal = False
+    esta_visivel = True
+    intervalo_piscar = 0.2
+    tempo_total = 0
+
     while (True):
         config.janela.set_background_color((0,0,0))
         
         # para mostrar o fps na tela
         cronometro += config.janela.delta_time()
+        tempo += config.janela.delta_time()
         fps = int(clock.get_fps())
         config.janela.draw_text(f"FPS: {fps}", 10, 5, size = 20, color=(255,255,255), font_name="Arial", bold=True, italic=False)     
         
-
-        naveMae.draw()
+        if esta_visivel:
+            naveMae.draw()
         if (config.teclado.key_pressed("ESC")):
             config.estado = 0
             break
 
-        if (config.teclado.key_pressed("SPACE") and cronometro > tempo_recarga):
+        if (config.teclado.key_pressed("SPACE") and cronometro > tempo_recarga_tiro_player):
             criarProjetil(projetil)
             cronometro = 0
 
@@ -142,16 +224,44 @@ def start():
         
         # cria matriz de inimigos
         if (len(matrizDeInimigos) == 0):
-            criar_matriz_inimigos(matrizDeInimigos, 4,4)
+            criar_matriz_inimigos(matrizDeInimigos, linha,coluna)
         
         # controla o movimento da matriz de inimigos
         direcao_inimigos = mover_inimigos(matrizDeInimigos, vel_Inimigos, direcao_inimigos)
         
         # desenha a matriz de inimigos
         draw_inimigos(matrizDeInimigos)
+        
+        kill_otimizado(projetil, matrizDeInimigos)
 
-        kill(projetil,matrizDeInimigos)
+        # cria tiros inimigos
+        if (tempo > tempo_recarga_tiro_inimigos):
+            tempo = 0
+            cria_projetil_inimigo(projetil_inimigos, matrizDeInimigos)
+        
+        # move os tiros inimigos e verifica se bateu na nave Mae
+        bateu = draw_tiros_inimigos(projetil_inimigos, vidas_nave, imortal)
+
+        if (bateu):
+            imortal = True
+            print(f"número de vidas:{vidas_nave}")
+            vidas_nave -= 1
+            if (vidas_nave == 0):
+                jogo_acabou()
+
+        if (imortal):
+            tempo_respawn += config.janela.delta_time()
+            tempo_total += config.janela.delta_time()
+            if (tempo_respawn > respawn_cooldown):
+                imortal = False
+                tempo_respawn = 0
+                esta_visivel = True
+            else:
+                if (tempo_total > intervalo_piscar):
+                    tempo_total = 0
+                    esta_visivel = not(esta_visivel)
+                    naveMae.set_position((config.janela.width - naveMae.width)/2, config.janela.height - 50)
 
 
-        clock.tick(60)
+        clock.tick(120)
         config.janela.update()
