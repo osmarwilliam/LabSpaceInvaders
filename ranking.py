@@ -1,10 +1,13 @@
 import json
 import config
+from time import gmtime, strftime
 
 RANKING_FILE = 'ranking.json'
 
 def salvar_pontuação(nome_jogador, pontuacao):
-    nova_pontuação = {'nome': nome_jogador, 'pontuacao': pontuacao}
+    data = strftime("%d %b %Y %H:%M:%S")
+
+    nova_pontuação = {'nome': nome_jogador, 'pontuacao': pontuacao, 'data': data}
 
     ranking = []
 
@@ -47,7 +50,8 @@ def ranking():
             posicao = i + 1
             nome = entrada['nome']
             pontos = entrada['pontuacao']
-            config.janela.draw_text(f"{posicao}. {nome} - {pontos}", 20, 50 + posicao * 33, size = 30, color=((211, 157, 44)), font_name="Arial", bold=True, italic=False)     
+            data = entrada['data']
+            config.janela.draw_text(f"{posicao}. {nome} {pontos} - {data}", 20, 50 + posicao * 33, size = 30, color=((211, 157, 44)), font_name="Arial", bold=True, italic=False)     
 
     while (True):
         if (config.teclado.key_pressed("ESC")):
